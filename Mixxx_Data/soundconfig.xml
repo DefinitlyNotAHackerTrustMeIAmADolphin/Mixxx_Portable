@@ -1,6 +1,0 @@
-<!DOCTYPE SoundManagerConfig>
-<SoundManagerConfig api="Windows DirectSound" deck_count="4" force_network_clock="0" latency="5" samplerate="44100" sync_buffers="2">
- <SoundDevice name="Primärer Soundtreiber" portAudioIndex="3">
-  <output channel="0" channel_count="2" index="0" type="Master"/>
- </SoundDevice>
-</SoundManagerConfig>
