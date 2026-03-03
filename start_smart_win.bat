@@ -4,10 +4,11 @@ setlocal
 set "BASE_DIR=%~dp0"
 set "BASE_DIR=%BASE_DIR:~0,-1%"
 set "DATA_DIR=%BASE_DIR%\Mixxx_Data"
+set "SCRIPT_DIR=%BASE_DIR%\Scripts"
 set "MIXXX_EXE=C:\Program Files\Mixxx\mixxx.exe"
 
 :: Path to our PORTABLE Python
-set "PORTABLE_PYTHON=%DATA_DIR%\python_win\python.exe"
+set "PORTABLE_PYTHON=%SCRIPT_DIR%\python_win\python.exe"
 
 echo [WINDOWS MODE] Swapping in Windows settings...
 
@@ -18,7 +19,7 @@ if exist "%DATA_DIR%\mixxx.cfg.win" (
 
 :: 2. Run the Portable Python to fix paths
 if exist "%PORTABLE_PYTHON%" (
-    "%PORTABLE_PYTHON%" "%DATA_DIR%\mixxx_path_fixer.py" "%DATA_DIR%" "windows"
+    "%PORTABLE_PYTHON%" "%SCRIPT_DIR%\mixxx_path_fixer.py" "%DATA_DIR%" "windows"
 ) else (
     echo Error: Portable Python not found at %PORTABLE_PYTHON%
     pause

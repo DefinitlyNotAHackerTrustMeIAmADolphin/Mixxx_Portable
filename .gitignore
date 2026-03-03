@@ -11,6 +11,7 @@ __pycache__/
 !/Music/.gitkeep
 
 # --- Mixxx Generated / Temporary Files ---
+/Mixxx_Data/*
 /Mixxx_Data/logs/
 /Mixxx_Data/covers/
 /Mixxx_Data/analysis/

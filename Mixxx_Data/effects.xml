@@ -87,16 +87,16 @@
   <ChainPresetName>Weißes Rauschen</ChainPresetName>
  </QuickEffectPresetList>
  <EqualizerEffects>
+  <Id group="[Channel3]">org.mixxx.effects.biquadfullkilleq Built-In</Id>
+  <Id group="[Channel2]">org.mixxx.effects.biquadfullkilleq Built-In</Id>
   <Id group="[Channel1]">org.mixxx.effects.biquadfullkilleq Built-In</Id>
   <Id group="[Channel4]">org.mixxx.effects.biquadfullkilleq Built-In</Id>
-  <Id group="[Channel2]">org.mixxx.effects.biquadfullkilleq Built-In</Id>
-  <Id group="[Channel3]">org.mixxx.effects.biquadfullkilleq Built-In</Id>
  </EqualizerEffects>
  <QuickEffectChains>
+  <ChainPresetName group="[Channel3]">Filter</ChainPresetName>
+  <ChainPresetName group="[Channel2]">Filter</ChainPresetName>
   <ChainPresetName group="[Channel1]">Filter</ChainPresetName>
   <ChainPresetName group="[Channel4]">Filter</ChainPresetName>
-  <ChainPresetName group="[Channel2]">Filter</ChainPresetName>
-  <ChainPresetName group="[Channel3]">Filter</ChainPresetName>
  </QuickEffectChains>
  <VisibleEffects>
   <Effect>

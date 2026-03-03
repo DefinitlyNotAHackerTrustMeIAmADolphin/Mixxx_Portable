@@ -48,7 +48,7 @@ vinylcontrol_enabled 0
 InhibitScreensaver 1
 Version 2.5.3
 hide_menubar 0
-show_menubar_hint 1
+show_menubar_hint 0
 
 [Controls]
 PositionDisplay 2

@@ -2,6 +2,7 @@
 # Get the folder where THIS script is
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DATA_DIR="$DIR/Mixxx_Data"
+SCRIPT_DIR="$DIR/Scripts"
 
 echo "[LINUX MODE] Swapping in Linux settings..."
 
@@ -11,7 +12,7 @@ if [ -f "$DATA_DIR/mixxx.cfg.lin" ]; then
 fi
 
 # Run the fixer
-python3 "$DATA_DIR/mixxx_path_fixer.py" "$DATA_DIR" "linux"
+python3 "$SCRIPT_DIR/mixxx_path_fixer.py" "$DATA_DIR" "linux"
 
 # Launch Mixxx
 mixxx --settingsPath "$DATA_DIR"
