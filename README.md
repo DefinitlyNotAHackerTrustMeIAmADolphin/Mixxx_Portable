@@ -43,7 +43,8 @@ This project uses a **"Smart Launcher"** system. Before Mixxx opens, a Python lo
 1.  **Install Mixxx** normally on both your Windows and Linux machines.
 2.  **Clone this repo** to your portable drive or cloud folder.
 3.  **Move your Music:** Place all your tracks inside the `/Music` folder of this repo.
-4.  **Move your Settings:** Copy your existing Mixxx data (from `AppData/Local/mixxx` or `~/.mixxx`) into the `Mixxx_Data/` folder.
+4.  **Move your Settings:(optional)** Copy your existing Mixxx data (from `AppData/Local/mixxx` or `~/.mixxx`) into the `Mixxx_Data/` folder.
+5.  **initial start** on the first run of the the launcher, select the `Music` folder as your library directory.
 
 ### 2. Making it Work
 *   **On Linux:** Run `chmod +x start_smart_lin.sh` to allow the script to execute.
@@ -84,4 +85,5 @@ If you add a track from your computer's "Downloads" or "Desktop" folder, the scr
 This project is licensed under the **GPL-3.0**. 
 
 > 🐬 *Trust me, I'm a dolphin. Your database is in safe fins.*
+
 
