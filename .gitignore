@@ -1,0 +1,48 @@
+# --- System / IDE Junk ---
+.DS_Store
+Thumbs.db
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Music Files ---
+# We keep the folder structure but ignore the actual audio tracks
+/Music/*
+!/Music/.gitkeep
+
+# --- Mixxx Generated / Temporary Files ---
+/Mixxx_Data/logs/
+/Mixxx_Data/covers/
+/Mixxx_Data/analysis/
+/Mixxx_Data/translations/
+/Mixxx_Data/shortcuts/
+/Mixxx_Data/broadcast_profiles/
+/Mixxx_Data/*.log
+/Mixxx_Data/mixxxdb.sqlite-wal
+/Mixxx_Data/mixxxdb.sqlite-shm
+
+# --- Mixxx Configs ---
+# We keep the templates (.win / .lin) but ignore the active working config
+# (The scripts will recreate it anyway)
+/Mixxx_Data/mixxx.cfg
+
+# --- Python Portable (Windows) ---
+# Normally Git ignores .exe and .dll, but we NEED these for the portable engine.
+# We un-ignore the python_win folder specifically.
+!/Mixxx_Data/python_win/
+/Mixxx_Data/python_win/**
+!/Mixxx_Data/python_win/*.exe
+!/Mixxx_Data/python_win/*.dll
+!/Mixxx_Data/python_win/*.pyd
+!/Mixxx_Data/python_win/*.zip
+!/Mixxx_Data/python_win/*.pth
+!/Mixxx_Data/python_win/Lib/
+
+# --- Project Files to KEEP ---
+# (Git includes these by default, but listed here for clarity)
+!start_smart_lin.sh
+!start_smart_win.bat
+!/Mixxx_Data/mixxx_path_fixer.py
+!/Mixxx_Data/mixxx.cfg.win
+!/Mixxx_Data/mixxx.cfg.lin
+!/Mixxx_Data/mixxxdb.sqlite
