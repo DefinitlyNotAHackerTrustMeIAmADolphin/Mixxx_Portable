@@ -1,7 +1,3 @@
-This updated `README.md` is the complete documentation for your project, including all features implemented to date (Path Reconstruction, Machine-Specific Configs, Safety Validator, and Multi-OS support).
-
-***
-
 # 🎧 Mixxx-Anywhere: Portable & Machine-Aware Sync
 
 A robust, professional-grade solution for running a **Mixxx** DJ setup from a portable drive (USB/SSD) or a synced cloud folder (Dropbox/OneDrive) across multiple computers and operating systems (**Windows, Linux, and macOS**).
