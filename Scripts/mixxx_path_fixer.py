@@ -60,8 +60,11 @@ def fix_paths(data_dir, to_os, mode="load"):
     hostname = socket.gethostname().lower()
     current_root = mixxx_normalize_path(portable_root)
     current_music_dir = current_root + "/Music"
+    # Define storage paths for configs
+    # We use .mac for macOS, .win for Windows, .lin for Linux
+    os_ext = to_os[:3].lower() 
     machine_cfg_store = os.path.join(config_dir, f"mixxx.cfg.{hostname}")
-    os_template_store = os.path.join(config_dir, f"mixxx.cfg.{to_os[:3].lower()}") 
+    os_template_store = os.path.join(config_dir, f"mixxx.cfg.{os_ext}") 
 
     print(f"--- Mixxx Sync [{to_os.upper()} | Machine: {hostname}] ---")
 
