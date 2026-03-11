@@ -1,6 +1,9 @@
 import sqlite3
 import os
 import sys
+import shutil
+import datetime
+import glob
 
 def mixxx_normalize_path(path_str):
     """Mixxx requires forward slashes and uppercase drive letters on all OSes."""
@@ -18,9 +21,44 @@ def fix_paths(data_dir, to_os):
     # Normalize our base directories immediately to Mixxx standards
     current_root = mixxx_normalize_path(portable_root)
     current_music_dir = current_root + "/Music"
+    
+    # Clean up the OS name for filenames (e.g. "windows", "mac", "linux")
+    safe_os_name = to_os.lower().strip()
 
     print(f"--- Mixxx Sync [{to_os.upper()}] ---")
     print(f"Target Music Path: {current_music_dir}")
+
+    # --- NEW: BACKUP & CLEANUP FEATURE (WITH OS NAMING) ---
+    try:
+        MAX_BACKUPS = 10 # Change this number to keep more or fewer backups!
+        backup_dir = os.path.join(data_dir, "Backups")
+        os.makedirs(backup_dir, exist_ok=True) 
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # 1. Create the new backups with the OS in the filename
+        if os.path.exists(db_path):
+            db_backup = os.path.join(backup_dir, f"mixxxdb_{safe_os_name}_{timestamp}.sqlite")
+            shutil.copy2(db_path, db_backup)
+        
+        if os.path.exists(cfg_path):
+            cfg_backup = os.path.join(backup_dir, f"mixxx_{safe_os_name}_{timestamp}.cfg")
+            shutil.copy2(cfg_path, cfg_backup)
+            
+        print(f"Backup created successfully in: Backups/ (OS: {safe_os_name.upper()} | Timestamp: {timestamp})")
+
+        # 2. Clean up old backups to prevent overflow
+        db_backups = sorted(glob.glob(os.path.join(backup_dir, "mixxxdb_*.sqlite")))
+        if len(db_backups) > MAX_BACKUPS:
+            for old_db in db_backups[:-MAX_BACKUPS]:
+                os.remove(old_db)
+
+        cfg_backups = sorted(glob.glob(os.path.join(backup_dir, "mixxx_*.cfg")))
+        if len(cfg_backups) > MAX_BACKUPS:
+            for old_cfg in cfg_backups[:-MAX_BACKUPS]:
+                os.remove(old_cfg)
+                
+    except Exception as e:
+        print(f"Backup Error: {e} - Proceeding without backup...")
 
     # --- PART A: DATABASE FIX ---
     if os.path.exists(db_path):
@@ -109,4 +147,7 @@ def fix_paths(data_dir, to_os):
             print(f"Config Error: {e}")
 
 if __name__ == "__main__":
-    fix_paths(sys.argv[1], sys.argv[2])
+    if len(sys.argv) > 2:
+        fix_paths(sys.argv[1], sys.argv[2])
+    else:
+        print("Usage: python helper.py <data_dir> <os_type>")
