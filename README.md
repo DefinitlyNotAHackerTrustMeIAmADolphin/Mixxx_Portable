@@ -80,10 +80,56 @@ If you add a track from your computer's "Downloads" or "Desktop" folder, the scr
 *   **startup issues** On Linux it can be a Problem if you install Mixxx via the Softwaremanager or Flatpack, try installing it via the packet Manager by running `sudo apt install mixxx` or equivalent on your machine.
 
 ---
+## Future Plans & Work in Progress
+
+### 🛡️ Improvement Suggestions (Stability & Safety)
+
+1.  **Automatic Database Backups:**
+    *   **The Problem:** If a power outage or crash occurs while the Python script is writing to the SQLite database, the library could be corrupted.
+    *   **The Fix:** Modify the `Scripts/` logic to copy `mixxxdb.sqlite` to `mixxxdb.sqlite.bak` *before* هر write operation. Keep the last 3 successful launches as rotated backups.
+
+2.  **macOS Support (The Missing Link):**
+    *   **The Suggestion:** You have Windows and Linux covered. Adding a `start_smart_mac.sh` would make this truly universal. 
+    *   **Technical Tip:** macOS usually mounts external drives under `/Volumes/DRIVE_NAME/`. Your path-rewriting logic needs to account for this specific prefix.
+
+3.  **Graceful Error Handling for "Locked" Databases:**
+    *   **The Problem:** If Mixxx didn't close properly, the `.sqlite-journal` file might exist, and your script might fail to open the DB.
+    *   **The Fix:** Add logic to check for journal files and warn the user (or wait for them to clear) before attempting the path-swap.
+
+4.  **Logging & Transparency:**
+    *   **The Suggestion:** Instead of a silent launch, have the console output exactly what it did.
+    *   *Example Output:* `[SUCCESS] Detected Drive E: | Updated 1,240 track paths | Swapped to Windows ASIO config.`
+
+---
+
+### ✨ Feature Requests (New Functionality)
+
+1.  **"Pre-Flight" Path Validator:**
+    *   **The Feature:** A script that scans the database and warns the user if any tracks are located **outside** the `/Music` anchor folder.
+    *   **Why:** This prevents users from accidentally adding a song from their "Downloads" folder, which will break the next time they use a different computer.
+
+2.  **Relative Pathing for Playlists (M3U Export):**
+    *   **The Feature:** An option to export all Mixxx playlists to standard `.m3u` files with relative paths within the portable folder.
+    *   **Why:** This allows the user to play their music in other apps (like VLC or a phone) directly from the same USB drive.
+
+3.  **Binary Download Helper:**
+    *   **The Feature:** A `setup_binaries.py` script.
+    *   **Why:** Since you can't distribute the Mixxx `.exe` easily via GitHub due to size/licensing, a script that fetches the latest stable ZIP from Mixxx.org and extracts it into a `/bin` folder would make the "Zero-Install" experience much smoother.
+
+4.  **"Dry Run" Mode:**
+    *   **The Feature:** A flag (e.g., `start_smart_win.bat --debug`) that shows what paths *would* be rewritten without actually changing the database.
+    *   **Why:** Extremely helpful for users trying to debug why their library isn't syncing correctly on a new Linux distro.
+
+5.  **Cloud-Sync Status Checker:**
+    *   **The Feature:** If the user is using Dropbox/OneDrive, the script checks if `mixxxdb.sqlite` is currently "Syncing" (locked by the cloud client) before launching.
+    *   **Why:** Prevents "Conflicted Copy" files which can result in lost DJ sets/history.
+
+---
 
 ## 📜 License
 This project is licensed under the **GPL-3.0**. 
 
 > 🐬 *Trust me, I'm a dolphin. Your database is in safe fins.*
+
 
 
