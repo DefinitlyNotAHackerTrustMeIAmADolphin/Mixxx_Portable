@@ -8,14 +8,15 @@ A robust solution for running a **Mixxx** DJ setup from a portable drive (USB/SS
 
 ### The Problem
 1.  **Paths:** Mixxx uses absolute paths (e.g., `C:\Users\Name\Music\...`). Move to another computer or Linux, and your library "breaks."
-2.  **Hardware:** Every computer has different soundcards and latency capabilities. A Windows ASIO config will crash a Linux machine, and a Laptop’s buffer settings will likely be too high/low for a Studio PC.
+2.  **Hardware:** Every computer has different soundcards. A Windows ASIO config will crash a Linux machine, and a laptop’s latency settings won't match a studio desktop.
+3.  **Human Error:** It is easy to accidentally add a track from a "Downloads" folder that isn't on the portable drive, leading to "Missing Track" errors later.
 
 ### The Solution
 The **Smart Launcher** handles the "surgery" before Mixxx starts:
-*   **Machine-Specific Hardware:** It detects the unique **Hostname** of the computer and loads/saves a dedicated hardware config for *that specific machine*.
+*   **Machine-Specific Hardware:** It detects the unique **Hostname** of the computer and loads/saves a dedicated hardware config for *that specific machine* in a dedicated folder.
 *   **Path Reconstruction:** It rewrites the SQLite database in real-time to match the current drive letter or mount point.
+*   **The "Pre-Flight" Validator:** It scans your library before launching and warns you if any tracks are located outside the portable folder.
 *   **Rolling Backups:** It maintains a self-cleaning history of your database, tagged by machine name and timestamp.
-*   **The Anchor System:** By keeping all music in a relative `/Music` folder, it ensures 100% portability.
 
 ---
 
@@ -31,9 +32,9 @@ The **Smart Launcher** handles the "surgery" before Mixxx starts:
 │   ├── Configs/          # Machine-specific hardware settings
 │   │   ├── mixxx.cfg.win      # Windows Generic Template
 │   │   ├── mixxx.cfg.lin      # Linux Generic Template
-│   │   ├── mixxx.cfg.dj-lap   # Specific settings for "DJ-LAP"
-│   │   └── mixxx.cfg.studio   # Specific settings for "STUDIO"
-│   └── Backups/          # Rolling DB backups (e.g., mixxxdb_dj-lap_20240311.sqlite)
+│   │   ├── mixxx.cfg.dj-laptop
+│   │   └── mixxx.cfg.studio-pc
+│   └── Backups/          # Rolling DB backups (tagged by machine name)
 └── Scripts/              
     └── mixxx_path_fixer.py   # The logic engine
 ```
@@ -42,18 +43,20 @@ The **Smart Launcher** handles the "surgery" before Mixxx starts:
 
 ## 🚀 Setup Guide
 
-### 1. Initial Preparation
-1.  **Install Mixxx** on your machines (Windows/Linux).
-2.  **Copy this Repository** to your portable drive or cloud folder.
-3.  **Move your Music:** Place all your tracks inside the `/Music` folder.
-4.  **Move existing data (Optional):** If you have an existing library, copy `mixxxdb.sqlite` into `Mixxx_Data/`.
+1.  **Install Mixxx** normally on your host machines.
+2.  **Move your Music:** Place all your tracks inside the `/Music` folder of this repo.
+3.  **Launch:** Run the `.bat` or `.sh` file.
+4.  **Hardware Setup:** On the first run on any new machine, configure your Sound Hardware (latency, soundcard) in Mixxx.
+5.  **Save:** When you close Mixxx, the script automatically saves those settings to `Mixxx_Data/Configs/mixxx.cfg.[your-hostname]`. Next time you use that machine, your settings will be waiting for you.
 
-### 2. The First Run
-1.  Launch the script for your OS (`.bat` or `.sh`).
-2.  Mixxx will open with a "blank" or "default" hardware config.
-3.  **Configure your Hardware:** Go to Preferences -> Sound Hardware. Set up your Soundcard, Latency, and Controllers.
-4.  **Set Music Folder:** When Mixxx asks, point the library to the `/Music` folder inside this portable directory.
-5.  **Close Mixxx:** The script will automatically detect your computer's name and save your settings into `Mixxx_Data/Configs/mixxx.cfg.[your-hostname]`.
+---
+
+## 🛡️ The "Pre-Flight" Validator
+Before Mixxx opens, the script checks your database for "Illegal" paths. If you added a song from your computer's `Desktop` or `Downloads` instead of the portable `/Music` folder, the terminal will display a high-visibility warning:
+
+`⚠️ WARNING: NON-PORTABLE TRACKS DETECTED`
+
+This allows you to move those files into the `/Music` folder and re-scan before you head to a gig where those local folders won't exist.
 
 ---
 
@@ -61,70 +64,39 @@ The **Smart Launcher** handles the "surgery" before Mixxx starts:
 To ensure sync works, you **must** follow this rule:
 > **All music files must stay inside the `/Music` folder on your portable drive.**
 
-If you add a track from a computer's local "Downloads" or "Desktop" folder, the script cannot "fix" it. When you switch to another computer, that track will be missing. 
-
 ---
 
-## 🔄 Daily Workflow
-
-1.  **Plug in** your drive.
-2.  **Launch** via `start_smart_win.bat` or `start_smart_lin.sh`.
-3.  **The Script will:**
-    *   Create a timestamped backup in `/Backups`.
-    *   Identify your machine and swap in your saved hardware config from `/Configs`.
-    *   Fix all file paths in the database to match the current drive.
-4.  **DJ Session:** Play, analyze tracks, and create playlists as usual.
-5.  **Close Mixxx:** The launcher will save any hardware changes (new MIDI maps, latency tweaks) back to your machine-specific config file.
-
----
-
-## ⚠️ Important Rules
-
-*   **Rescan on Startup:** Keep "Rescan on Startup" **OFF** in Mixxx preferences. Let the script finish its work before Mixxx scans. If you added new music, use **Right Click Tracks -> Rescan Library**.
-*   **Closing Mixxx:** Always let the terminal window (the script) finish its "Saving" process after you close Mixxx before unplugging your drive.
-*   **Linux Permissions:** On Linux, ensure the script is executable: `chmod +x start_smart_lin.sh`.
-
----
-
-## Future Plans & Work in Progress
+## 🔄 Future Plans & Work in Progress
 
 ### 🛡️ Improvement Suggestions (Stability & Safety)
 
-1.  **macOS Support (The Missing Link):**
-    *   **The Suggestion:** You have Windows and Linux covered (and our new backup system is already future-proofed to tag `mac` files!). Adding a `start_smart_mac.sh` would make this truly universal. 
-    *   **Technical Tip:** macOS usually mounts external drives under `/Volumes/DRIVE_NAME/`. Your path-rewriting logic needs to account for this specific prefix.
+1.  **macOS Support:**
+    *   **Goal:** Add `start_smart_mac.sh`.
+    *   **Note:** Needs to account for macOS mounting external drives under `/Volumes/`.
 
 2.  **Graceful Error Handling for "Locked" Databases:**
-    *   **The Problem:** If Mixxx didn't close properly, the `.sqlite-journal` file might exist, and your script might fail to open the DB.
-    *   **The Fix:** Add logic to check for journal files and warn the user (or wait for them to clear) before attempting the path-swap.
+    *   **The Problem:** If Mixxx crashes, a `.sqlite-journal` file may exist, locking the DB.
+    *   **The Fix:** Add logic to check for journal files and warn the user before attempting the path-swap.
 
 3.  **Expanded Logging & Transparency:**
-    *   **The Suggestion:** The script currently prints path reconstruction success and backup timestamps. Expanding this to show exactly how many tracks were updated would be a great UX boost.
-    *   *Example Output:* `[SUCCESS] Updated 1,240 track paths | Swapped to Windows ASIO config.`
+    *   **Goal:** Show a summary of how many track paths were updated in the current session (e.g., `[SUCCESS] Updated 1,240 track paths`).
 
 ---
 
 ### ✨ Feature Requests (New Functionality)
 
-1.  **"Pre-Flight" Path Validator:**
-    *   **The Feature:** A script that scans the database and warns the user if any tracks are located **outside** the `/Music` anchor folder.
-    *   **Why:** This prevents users from accidentally adding a song from their "Downloads" folder, which will break the next time they use a different computer.
+1.  **Custom Controller Mapping Sync:**
+    *   **The Feature:** Create a system to sync custom `.xml` and `.js` MIDI mappings across machines so your controllers work instantly everywhere.
 
 2.  **Relative Pathing for Playlists (M3U Export):**
-    *   **The Feature:** An option to export all Mixxx playlists to standard `.m3u` files with relative paths within the portable folder.
-    *   **Why:** This allows the user to play their music in other apps (like VLC or a phone) directly from the same USB drive.
+    *   **The Feature:** An option to export Mixxx playlists to standard `.m3u` files with relative paths.
+    *   **Why:** Allows playing your music in other apps (VLC/Mobile) directly from the USB drive.
 
 3.  **Binary Download Helper:**
-    *   **The Feature:** A `setup_binaries.py` script.
-    *   **Why:** Since you can't distribute the Mixxx `.exe` easily via GitHub due to size/licensing, a script that fetches the latest stable ZIP from Mixxx.org and extracts it into a `/bin` folder would make the "Zero-Install" experience much smoother.
+    *   **The Feature:** A `setup_binaries.py` script to fetch the latest Mixxx portable ZIP and extract it into a `/bin` folder for a "Zero-Install" experience.
 
-4.  **"Dry Run" Mode:**
-    *   **The Feature:** A flag (e.g., `start_smart_win.bat --debug`) that shows what paths *would* be rewritten without actually changing the database.
-    *   **Why:** Extremely helpful for users trying to debug why their library isn't syncing correctly on a new Linux distro.
-
-5.  **Cloud-Sync Status Checker:**
-    *   **The Feature:** If the user is using Dropbox/OneDrive, the script checks if `mixxxdb.sqlite` is currently "Syncing" (locked by the cloud client) before launching.
-    *   **Why:** Prevents "Conflicted Copy" files which can result in lost DJ sets/history.
+4.  **Cloud-Sync Status Checker:**
+    *   **The Feature:** If using Dropbox/OneDrive, check if the database is currently "Syncing" before launching to prevent "Conflicted Copy" data loss.
 
 ---
 
@@ -132,4 +104,3 @@ If you add a track from a computer's local "Downloads" or "Desktop" folder, the 
 This project is licensed under the **GPL-3.0**. 
 
 > 🐬 *Trust me, I'm a dolphin. Your database is in safe fins.*
-

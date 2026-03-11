@@ -13,13 +13,41 @@ def mixxx_normalize_path(path_str):
         path_str = path_str[0].upper() + path_str[1:]
     return path_str
 
+def validate_library(db_path):
+    """Checks for tracks located OUTSIDE the portable folder."""
+    if not os.path.exists(db_path):
+        return
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    try:
+        # We look for any track location that doesn't belong to our portable anchor
+        cur.execute("SELECT location FROM track_locations WHERE location NOT LIKE '%Mixxx_Portable%'")
+        external_tracks = cur.fetchall()
+
+        if external_tracks:
+            print("\n" + "!"*60)
+            print("⚠️  WARNING: NON-PORTABLE TRACKS DETECTED")
+            print(f"Found {len(external_tracks)} tracks located outside your portable drive.")
+            print("These tracks will be MISSING when you switch computers!")
+            print("!"*60)
+            print("Examples of tracks to move into /Music:")
+            for (path,) in external_tracks[:10]: # Show first 10
+                print(f" -> {path}")
+            if len(external_tracks) > 10:
+                print(f" ... and {len(external_tracks) - 10} more.")
+            print("!"*60 + "\n")
+            # We don't exit/stop, just warn the user before Mixxx starts.
+    except Exception as e:
+        print(f"Validator Error: {e}")
+    finally:
+        conn.close()
+
 def fix_paths(data_dir, to_os, mode="load"):
-    # 1. SETUP PATHS & IDENTITY
     portable_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     db_path = os.path.join(data_dir, "mixxxdb.sqlite")
     cfg_active = os.path.join(data_dir, "mixxx.cfg")
     
-    # Subfolders
     config_dir = os.path.join(data_dir, "Configs")
     backup_dir = os.path.join(data_dir, "Backups")
     os.makedirs(config_dir, exist_ok=True)
@@ -29,32 +57,28 @@ def fix_paths(data_dir, to_os, mode="load"):
     current_root = mixxx_normalize_path(portable_root)
     current_music_dir = current_root + "/Music"
     
-    # Define storage paths for configs
     machine_cfg_store = os.path.join(config_dir, f"mixxx.cfg.{hostname}")
     os_template_store = os.path.join(config_dir, f"mixxx.cfg.{to_os[:3].lower()}") 
 
     print(f"--- Mixxx Sync [{to_os.upper()} | Machine: {hostname}] ---")
 
-    # --- MODE: SAVE (Called after Mixxx closes) ---
     if mode == "save":
         if os.path.exists(cfg_active):
             shutil.copy2(cfg_active, machine_cfg_store)
             print(f"Hardware settings saved to: Configs/mixxx.cfg.{hostname}")
         return
 
-    # --- MODE: LOAD (Called before Mixxx starts) ---
+    # --- LOAD MODE ---
     
-    # 1. Hardware Config Swap Logic (Load from Configs folder into root)
+    # 1. Hardware Config Swap
     if os.path.exists(machine_cfg_store):
         print(f"Found specific config for {hostname}. Restoring...")
         shutil.copy2(machine_cfg_store, cfg_active)
     elif os.path.exists(os_template_store):
         print(f"No machine-specific config. Using {to_os} template...")
         shutil.copy2(os_template_store, cfg_active)
-    else:
-        print("No backup config found. Using current mixxx.cfg if it exists.")
 
-    # 2. DATABASE BACKUP
+    # 2. Database Backup
     try:
         MAX_BACKUPS = 10 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -62,7 +86,6 @@ def fix_paths(data_dir, to_os, mode="load"):
             db_backup = os.path.join(backup_dir, f"mixxxdb_{hostname}_{timestamp}.sqlite")
             shutil.copy2(db_path, db_backup)
         
-        # Cleanup old backups
         db_backups = sorted(glob.glob(os.path.join(backup_dir, f"mixxxdb_{hostname}_*.sqlite")))
         if len(db_backups) > MAX_BACKUPS:
             for old_db in db_backups[:-MAX_BACKUPS]:
@@ -70,12 +93,11 @@ def fix_paths(data_dir, to_os, mode="load"):
     except Exception as e:
         print(f"Backup Error: {e}")
 
-    # 3. DATABASE PATH RECONSTRUCTION
+    # 3. Path Reconstruction
     if os.path.exists(db_path):
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
         try:
-            # Ghost cleanup (important to prevent duplicates when moving drives)
             cur.execute("DELETE FROM track_locations WHERE id IN (SELECT location FROM library WHERE mixxx_deleted = 1)")
             cur.execute("DELETE FROM library WHERE mixxx_deleted = 1")
             
@@ -101,14 +123,13 @@ def fix_paths(data_dir, to_os, mode="load"):
                             try:
                                 cur.execute(f"UPDATE {table} SET {col} = ? WHERE {pkey} = ?", (new_path, pk))
                             except sqlite3.IntegrityError:
-                                # This happens if the path already exists in the DB (prevent duplicates)
                                 cur.execute(f"DELETE FROM {table} WHERE {pkey} = ?", (pk,))
             conn.commit()
             print("Database: Path reconstruction complete.")
         finally:
             conn.close()
 
-    # 4. CONFIG FILE PATH RECONSTRUCTION (The Active mixxx.cfg in root)
+    # 4. Config File Reconstruction
     if os.path.exists(cfg_active):
         try:
             with open(cfg_active, 'r', encoding='utf-8', errors='ignore') as f:
@@ -139,6 +160,9 @@ def fix_paths(data_dir, to_os, mode="load"):
             print("Config: Path reconstruction complete.")
         except Exception as e:
             print(f"Config Error: {e}")
+
+    # 5. NEW: VALIDATE LIBRARY (The Safety Net)
+    validate_library(db_path)
 
 if __name__ == "__main__":
     if len(sys.argv) >= 3:
