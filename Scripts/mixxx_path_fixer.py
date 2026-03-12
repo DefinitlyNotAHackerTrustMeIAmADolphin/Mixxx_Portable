@@ -13,42 +13,49 @@ def mixxx_normalize_path(path_str):
         path_str = path_str[0].upper() + path_str[1:]
     return path_str
 
+def robust_open(file_path, mode, encoding='utf-8', retries=5, delay=0.2):
+    """Try to open a file multiple times to bypass cloud-sync (Dropbox) locks."""
+    for i in range(retries):
+        try:
+            return open(file_path, mode, encoding=encoding, errors='ignore')
+        except (OSError, IOError) as e:
+            if i == retries - 1:
+                raise e
+            time.sleep(delay)
+    return open(file_path, mode, encoding=encoding)
+
 def check_db_lock(db_path):
-    """Checks if Mixxx is still using the database or if it crashed."""
     journal = db_path + "-journal"
     wal = db_path + "-wal"
-    
     if os.path.exists(journal) or os.path.exists(wal):
         print("\n" + "!"*60)
         print("⚠️  DATABASE IS LOCKED OR RECOVERING")
-        print("Mixxx might still be running, or it didn't close properly last time.")
-        print("Writing to a locked database can cause PERMANENT DATA LOSS.")
+        print("Mixxx might still be running, or it didn't close properly.")
         print("!"*60)
         choice = input("Proceed anyway? (y/N): ").lower()
         if choice != 'y':
-            print("Aborting to protect your library.")
             sys.exit(1)
 
 def validate_library(db_path):
     if not os.path.exists(db_path): return
-    conn = sqlite3.connect(db_path)
-    cur = conn.cursor()
     try:
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
         cur.execute("SELECT location FROM track_locations WHERE location NOT LIKE '%Mixxx_Portable%'")
         external_tracks = cur.fetchall()
         if external_tracks:
             print("\n" + "!"*60)
             print("⚠️  WARNING: NON-PORTABLE TRACKS DETECTED")
             print(f"Found {len(external_tracks)} tracks outside your portable drive.")
-            print("These tracks will be MISSING when you switch computers!")
             print("!"*60)
             for (path,) in external_tracks[:5]: print(f" -> {path}")
-            if len(external_tracks) > 5: print(f" ... and {len(external_tracks) - 5} more.")
             print("!"*60 + "\n")
-    finally:
         conn.close()
+    except Exception: pass
 
 def fix_paths(data_dir, to_os, mode="load"):
+    # Normalize path strings to prevent Windows 'Invalid Argument' errors
+    data_dir = os.path.abspath(data_dir)
     portable_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     db_path = os.path.join(data_dir, "mixxxdb.sqlite")
     cfg_active = os.path.join(data_dir, "mixxx.cfg")
@@ -60,9 +67,8 @@ def fix_paths(data_dir, to_os, mode="load"):
     hostname = socket.gethostname().lower()
     current_root = mixxx_normalize_path(portable_root)
     current_music_dir = current_root + "/Music"
-    # Define storage paths for configs
-    # We use .mac for macOS, .win for Windows, .lin for Linux
-    os_ext = to_os[:3].lower() 
+    
+    os_ext = to_os[:3].lower()
     machine_cfg_store = os.path.join(config_dir, f"mixxx.cfg.{hostname}")
     os_template_store = os.path.join(config_dir, f"mixxx.cfg.{os_ext}") 
 
@@ -78,7 +84,6 @@ def fix_paths(data_dir, to_os, mode="load"):
     if os.path.exists(db_path):
         check_db_lock(db_path)
 
-    # Hardware Config Swap
     if os.path.exists(machine_cfg_store):
         print(f"Found specific config for {hostname}. Restoring...")
         shutil.copy2(machine_cfg_store, cfg_active)
@@ -94,16 +99,16 @@ def fix_paths(data_dir, to_os, mode="load"):
             db_backup = os.path.join(backup_dir, f"mixxxdb_{hostname}_{timestamp}.sqlite")
             shutil.copy2(db_path, db_backup)
         db_backups = sorted(glob.glob(os.path.join(backup_dir, f"mixxxdb_{hostname}_*.sqlite")))
-        for old_db in db_backups[:-MAX_BACKUPS]: os.remove(old_db)
+        if len(db_backups) > MAX_BACKUPS:
+            for old_db in db_backups[:-MAX_BACKUPS]: os.remove(old_db)
     except Exception as e: print(f"Backup Error: {e}")
 
     # Path Reconstruction
     total_updated = 0
     if os.path.exists(db_path):
-        conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
         try:
-            # Ghost cleanup
+            conn = sqlite3.connect(db_path)
+            cur = conn.cursor()
             cur.execute("DELETE FROM track_locations WHERE id IN (SELECT location FROM library WHERE mixxx_deleted = 1)")
             cur.execute("DELETE FROM library WHERE mixxx_deleted = 1")
             
@@ -124,22 +129,20 @@ def fix_paths(data_dir, to_os, mode="load"):
                         if "Mixxx_Portable/Music" in clean_old:
                             sub_path = clean_old.split("Mixxx_Portable/Music")[-1].lstrip("/")
                             new_path = f"{current_music_dir}/{sub_path}"
-                            if clean_old != new_path: # Only update if it actually changed
-                                try:
-                                    cur.execute(f"UPDATE {table} SET {col} = ? WHERE {pkey} = ?", (new_path, pk))
-                                    total_updated += 1
-                                except sqlite3.IntegrityError:
-                                    cur.execute(f"DELETE FROM {table} WHERE {pkey} = ?", (pk,))
+                            if clean_old != new_path:
+                                cur.execute(f"UPDATE {table} SET {col} = ? WHERE {pkey} = ?", (new_path, pk))
+                                total_updated += 1
             conn.commit()
-            print(f"[SUCCESS] Database: Updated {total_updated} file path entries.")
-        finally:
             conn.close()
+            print(f"[SUCCESS] Database: Updated {total_updated} file path entries.")
+        except Exception as e: print(f"Database Error: {e}")
 
-    # Config File Reconstruction
+    # Config File Reconstruction (Using Robust Open)
     if os.path.exists(cfg_active):
         try:
-            with open(cfg_active, 'r', encoding='utf-8', errors='ignore') as f:
+            with robust_open(cfg_active, 'r') as f:
                 lines = f.readlines()
+            
             new_lines = []; cfg_fixes = 0
             in_lib = False
             for line in lines:
@@ -165,7 +168,8 @@ def fix_paths(data_dir, to_os, mode="load"):
                         new_lines.append(new_val)
                     else: new_lines.append(line)
                 else: new_lines.append(line)
-            with open(cfg_active, 'w', encoding='utf-8') as f:
+            
+            with robust_open(cfg_active, 'w') as f:
                 f.writelines(new_lines)
             print(f"[SUCCESS] Config: Applied {cfg_fixes} path updates.")
         except Exception as e: print(f"Config Error: {e}")
