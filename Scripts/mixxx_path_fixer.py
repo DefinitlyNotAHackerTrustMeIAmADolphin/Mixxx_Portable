@@ -88,7 +88,7 @@ def fix_paths(data_dir, to_os, mode="load"):
 
     # Database Backup
     try:
-        MAX_BACKUPS = 10 
+        MAX_BACKUPS = 10
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         if os.path.exists(db_path):
             db_backup = os.path.join(backup_dir, f"mixxxdb_{hostname}_{timestamp}.sqlite")
