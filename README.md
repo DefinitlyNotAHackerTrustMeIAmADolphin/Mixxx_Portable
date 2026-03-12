@@ -89,6 +89,7 @@ If you add music from your computer's local folders, the script cannot "fix" the
 *   **Cloud-Sync Status Checker:** A feature to detect if a cloud client (like Dropbox) is currently uploading the database to prevent "Conflicted Copy" data loss.
 *   **M3U Playlist Export:** Generate portable playlists for use in VLC or mobile apps with relative pathing.
 *   **Binary Download Helper:** A script to download a portable Mixxx executable directly to the drive for a true "zero-install" experience.
+*   **Music Fetcher:** Collects Music files that are scattered all over your disk(s) into a Pack&Go folder.
 
 ---
 
@@ -96,3 +97,4 @@ If you add music from your computer's local folders, the script cannot "fix" the
 This project is licensed under the **GPL-3.0**. 
 
 > 🐬 *Trust me, I'm a dolphin. Your database is in safe fins.*
+
