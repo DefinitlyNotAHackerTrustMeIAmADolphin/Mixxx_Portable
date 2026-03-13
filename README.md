@@ -46,6 +46,16 @@ The **Smart Launcher** acts as a "logic bridge" that prepares your environment b
 ```
 
 ---
+## 📋 Prerequisites
+
+This project requires **Python 3** to be installed on your system to perform the path reconstruction.
+
+*   **Windows:** Download and install from [python.org](https://www.python.org/downloads/windows/) or install via the Microsoft Store.
+*   **Linux (Ubuntu/Debian):** Most distros come with Python, but if missing, run:
+    `sudo apt update && sudo apt install python3`
+*   **macOS:** Open a Terminal and type `python3 --version`. If not installed, macOS will typically prompt you to install the "Command Line Developer Tools" which includes Python. Alternatively, download it from [python.org](https://www.python.org/downloads/macos/).
+
+---
 
 ## 🚀 Setup Guide
 
@@ -97,4 +107,5 @@ If you add music from your computer's local folders, the script cannot "fix" the
 This project is licensed under the **GPL-3.0**. 
 
 > 🐬 *Trust me, I'm a dolphin. Your database is in safe fins.*
+
 
