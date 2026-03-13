@@ -4,8 +4,10 @@ A robust, professional-grade solution for running a **Mixxx** DJ setup from a po
 
 This project ensures that your track analysis, cues, playlists, and even specific audio hardware settings (latency, soundcard IDs) follow you everywhere without "Missing Track" errors or database crashes.
 
-> [!CAUTION]
+>[!CAUTION]
 > **macOS SUPPORT STATUS:** The macOS logic and `start_smart_mac.sh` launcher have been implemented but are currently **UNTESTED**. Use with caution on Mac systems and ensure you have a separate backup of your music.
+> 
+> **🍎 macOS Users (Full Disk Access):** Modern macOS restricts apps from accessing external USB drives. If your tracks show up in Mixxx but won't play or analyze, go to **System Settings > Privacy & Security > Files and Folders**, find **Mixxx**, and ensure it has permission to access **Removable Volumes**.
 
 ---
 
