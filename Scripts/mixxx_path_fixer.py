@@ -16,22 +16,44 @@ def mixxx_normalize_path(path_str):
     return path_str
 
 def is_mixxx_running():
-    """Check if the Mixxx binary is specifically running, avoiding false positives."""
+    """Check if the Mixxx binary is specifically running."""
     try:
         if sys.platform == "win32":
-            # Filter tasklist for the exact executable name
-            cmd = 'tasklist /FI "IMAGENAME eq mixxx.exe" /NH'
+            # Using /NH (no header) and CSV format for cleaner parsing
+            cmd = 'tasklist /FI "IMAGENAME eq mixxx.exe" /FO CSV /NH'
             output = subprocess.check_output(cmd, shell=True).decode('utf-8', 'ignore')
             return "mixxx.exe" in output.lower()
         else:
-            # pgrep -x matches the EXACT process name 'mixxx', ignoring the script name/folder path
+            # -x ensures we match the exact process name 'mixxx'
             result = subprocess.run(['pgrep', '-x', 'mixxx'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return result.returncode == 0
     except: 
         return False
 
+def check_environment(data_dir):
+    print("🔍 Checking Environment...")
+    issues = []
+    
+    music_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Music")
+    if not os.path.exists(music_dir):
+        issues.append(f"- 'Music' folder not found. Please create: {music_dir}")
+    
+    if not os.path.exists(data_dir):
+        try: os.makedirs(data_dir)
+        except: issues.append(f"- Cannot create Mixxx_Data folder at {data_dir}")
+
+    if issues:
+        print("\n" + "!"*60)
+        print("❌ SETUP ISSUES FOUND:")
+        for issue in issues: print(issue)
+        print("!"*60)
+        input("\nPress Enter to try and continue anyway...")
+        return False
+    
+    print("✅ Environment Healthy.")
+    return True
+
 def check_db_integrity(db_path):
-    """Run a quick SQLite integrity check."""
     try:
         conn = sqlite3.connect(db_path, timeout=5.0)
         res = conn.execute("PRAGMA integrity_check").fetchone()
@@ -78,13 +100,19 @@ def validate_library(db_path, current_root):
     except Exception: pass
 
 def fix_paths(data_dir, to_os, mode="load"):
-    # Abort if Mixxx is already running
+    # 1. Block multiple instances
     if mode == "load" and is_mixxx_running():
         print("\n" + "!"*60)
-        print("❌ ERROR: Mixxx is already running!")
-        print("Please close Mixxx before using the Smart Launcher.")
+        print("❌ ERROR: MIXXX IS ALREADY RUNNING!")
+        print("To prevent database corruption, you cannot run two instances.")
+        print("Please close Mixxx and try again.")
         print("!"*60)
+        # Force a pause so the window doesn't flash shut
+        input("\nPress Enter to exit...")
         sys.exit(1)
+
+    if mode == "load":
+        check_environment(data_dir)
 
     data_dir = os.path.abspath(data_dir)
     portable_root_abs = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -101,7 +129,6 @@ def fix_paths(data_dir, to_os, mode="load"):
 
     hostname = socket.gethostname().lower()
     print(f"--- Mixxx Sync [{to_os.upper()} | {hostname}] ---")
-    print(f"Current Path: {current_root}")
 
     if mode == "save":
         if os.path.exists(cfg_active):
@@ -109,12 +136,10 @@ def fix_paths(data_dir, to_os, mode="load"):
             print(f"[SUCCESS] Hardware settings saved.")
         return
 
-    # 1. Integrity Check
+    # 2. Integrity Check
     if os.path.exists(db_path):
         if not check_db_integrity(db_path):
-            print("\n" + "!"*60)
-            print("❌ DATABASE CORRUPTION DETECTED")
-            print("!"*60)
+            print("\n❌ DATABASE CORRUPTION DETECTED")
             backups = sorted(glob.glob(os.path.join(backup_dir, f"mixxxdb_{hostname}_*.sqlite")))
             if backups:
                 latest = backups[-1]
@@ -122,30 +147,24 @@ def fix_paths(data_dir, to_os, mode="load"):
                 if choice == 'y':
                     shutil.copy2(latest, db_path)
                     print("Backup restored.")
-                else: sys.exit(1)
+                else: 
+                    print("Aborted.")
+                    input("Press Enter to exit...")
+                    sys.exit(1)
             else:
-                print("No backups found. Cannot proceed.")
+                print("No backups found. Cannot proceed safely.")
+                input("Press Enter to exit...")
                 sys.exit(1)
 
-    # 2. Hardware Restoration / Scrubbing
+    # 3. Hardware restoration
     machine_cfg = os.path.join(config_dir, f"mixxx.cfg.{hostname}")
     os_template = os.path.join(config_dir, f"mixxx.cfg.{to_os[:3].lower()}")
     if os.path.exists(machine_cfg):
         shutil.copy2(machine_cfg, cfg_active)
     elif os.path.exists(os_template):
         shutil.copy2(os_template, cfg_active)
-    elif os.path.exists(cfg_active):
-        print("Sanitizing hardware config...")
-        try:
-            with robust_open(cfg_active, 'r') as f: lines = f.readlines()
-            safe_lines = []; in_hw = False
-            for l in lines:
-                if l.strip().startswith("[") and l.strip().endswith("]"): in_hw = (l.strip() == "[Soundcard]")
-                if not in_hw: safe_lines.append(l)
-            with robust_open(cfg_active, 'w') as f: f.writelines(safe_lines)
-        except: pass
 
-    # 3. Create Rolling Backup
+    # 4. Backup
     if os.path.exists(db_path):
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         shutil.copy2(db_path, os.path.join(backup_dir, f"mixxxdb_{hostname}_{ts}.sqlite"))
@@ -153,7 +172,7 @@ def fix_paths(data_dir, to_os, mode="load"):
             try: os.remove(old)
             except: pass
 
-    # 4. Database Updates
+    # 5. DB Migration
     if os.path.exists(db_path):
         old_root = get_old_root_from_db(db_path)
         if old_root and old_root != current_root:
@@ -173,7 +192,7 @@ def fix_paths(data_dir, to_os, mode="load"):
                 print("[SUCCESS] Database updated.")
             except Exception as e: print(f"Database Error: {e}")
 
-    # 5. Config Updates
+    # 6. Config Migration
     if os.path.exists(cfg_active):
         try:
             with robust_open(cfg_active, 'r') as f: lines = f.readlines()
@@ -186,11 +205,6 @@ def fix_paths(data_dir, to_os, mode="load"):
                 with robust_open(cfg_active, 'w') as f:
                     f.writelines([l.replace(old_cfg_root, current_root) for l in lines])
                 print("[SUCCESS] Config updated.")
-            elif not old_cfg_root:
-                if not any(l.startswith("Directory ") for l in lines):
-                    lines.append(f"Directory {current_music_dir}\n")
-                    lines.append(f"RecordingDirectory {current_music_dir}\n")
-                    with robust_open(cfg_active, 'w') as f: f.writelines(lines)
         except: pass
 
     validate_library(db_path, current_root)
